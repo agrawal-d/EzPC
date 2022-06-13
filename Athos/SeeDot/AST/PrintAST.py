@@ -56,7 +56,7 @@ class PrintAST(ASTVisitor):
         print(indent * node.depth, node.value, end=" ")
 
     def visitId(self, node: AST.ID, args=None):
-        print(indent * node.depth, node.name, end=" ")
+        print(indent * node.depth, node.name, end="")
 
     def visitDecl(self, node: AST.Decl, args=None):
         if node.valueList:
@@ -83,10 +83,12 @@ class PrintAST(ASTVisitor):
 
     def visitReshape(self, node: AST.Reshape, args=None):
         node.expr.depth = node.depth + 1
-        print(indent * node.depth, "reshape", end=" ")
+        sz = " " if node.order is None else str(len(node.order))
+        print(f"reshape{sz}", end="( ")
         self.visit(node.expr)
+        print(", ", end="")
         if node.order:
-            print(liststr(node.shape), "order", node.order, end=" ")
+            print(liststr(node.shape), ", ", liststr(node.order), end=" ")
         else:
             print(liststr(node.shape), end=" ")
 
