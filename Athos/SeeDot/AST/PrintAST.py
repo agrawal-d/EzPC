@@ -33,11 +33,18 @@ indent = ""
 saveFile = open("ast.txt", "w")
 
 
+# Overrides builtin print to write to file
 def print(*args, sep=None, end=None):
     for arg in args:
         builtins.print(arg, sep="", end="", file=saveFile)
 
     builtins.print(end, sep="", end="", file=saveFile)
+
+
+# Convert list to CSV
+def liststr(data: list):
+    data = map(lambda var: str(var), data)
+    return ", ".join(data)
 
 
 class PrintAST(ASTVisitor):
@@ -55,12 +62,12 @@ class PrintAST(ASTVisitor):
         if node.valueList:
             print(
                 indent * node.depth,
-                node.shape,
+                liststr(liststr(node.shape)),
                 list(map(lambda x: x.value, node.valueList)),
                 end=" ",
             )
         else:
-            print(indent * node.depth, node.shape, end=" ")
+            print(indent * node.depth, liststr(node.shape), end=" ")
 
     def visitTranspose(self, node: AST.Transpose, args=None):
         node.expr.depth = node.depth + 1
@@ -79,15 +86,15 @@ class PrintAST(ASTVisitor):
         print(indent * node.depth, "reshape", end=" ")
         self.visit(node.expr)
         if node.order:
-            print(node.shape, "order", node.order, end=" ")
+            print(liststr(node.shape), "order", node.order, end=" ")
         else:
-            print(node.shape, end=" ")
+            print(liststr(node.shape), end=" ")
 
     def visitGather(self, node: AST.Gather, args=None):
         node.expr.depth = node.depth + 1
         print(indent * node.depth, "Gather", end=" ")
         self.visit(node.expr)
-        print(node.shape, node.axis, node.index, end=" ")
+        print(liststr(node.shape), node.axis, node.index, end=" ")
 
     def visitPool(self, node: AST.Pool, args=None):
         node.expr.depth = node.depth + 1
@@ -112,26 +119,22 @@ class PrintAST(ASTVisitor):
         self.visit(node.expr)
 
     def visitLet(self, node: AST.Let, args=None):
-        if node.decl is not None:
-            node.decl.depth = node.depth + 1
-        if node.expr is not None:
-            node.expr.depth = node.depth + 1
-        print(indent * node.depth, "(", end=" ")
-        print("let", end=" ")
-        if hasattr(node.name, "type") and hasattr(node.name.type, "taint"):
-            print("<", node.decl.type.taint.name, ">", end=" ")
-        self.visit(node.name)
-        print("=", end=" ")
+        # if hasattr(node.name, "type") and hasattr(node.name.type, "taint"):
+        #     print("<", node.decl.type.taint.name, ">", end=" ")
+
+        # Variable save name node.name
         self.visit(node.decl)
-        print(
-            "{",
-            node.metadata[AST.ASTNode.mtdKeyTFOpName],
-            node.metadata[AST.ASTNode.mtdKeyTFNodeName],
-            "} in ",
-            end="\n",
-        )
+        print(", ", end="")
+        self.visit(node.name)
+        # print(
+        #     "{",
+        #     node.metadata[AST.ASTNode.mtdKeyTFOpName],
+        #     node.metadata[AST.ASTNode.mtdKeyTFNodeName],
+        #     "} in ",
+        #     end="\n",
+        # )
+        print(")", end="\n")
         self.visit(node.expr)
-        print(")", end="")
 
     def visitUninterpFuncCall(self, node: AST.UninterpFuncCall, args=None):
         print(indent * node.depth, "UninterpFuncCall", node.funcName, end=" ")
@@ -156,14 +159,13 @@ class PrintAST(ASTVisitor):
         print(
             indent * node.depth,
             "input( ",
-            node.shape,
+            liststr(node.shape),
+            ", ",
             node.dataType,
-            " <",
+            ", ",
             node.inputByParty.name,
-            "> ",
             end="",
         )
-        print(" )", end="")
 
     def visitOutput(self, node: AST.Output, args=None):
         print(indent * node.depth, "output( ", end="")
